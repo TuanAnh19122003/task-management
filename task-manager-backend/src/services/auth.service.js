@@ -30,6 +30,32 @@ class AuthService {
 
         return { user, token };
     }
+
+    static async updateMe(userId, data, file) {
+        const user = await User.findByPk(userId);
+        if (!user) throw new Error('User không tồn tại');
+
+        // Xử lý avatar nếu có file mới
+        if (file) {
+            // Xóa ảnh cũ nếu có
+            if (user.avatar) {
+                const oldImagePath = path.join(__dirname, '../../', user.avatar);
+                if (fs.existsSync(oldImagePath)) {
+                    fs.unlinkSync(oldImagePath);
+                }
+            }
+            data.avatar = `uploads/${file.filename}`;
+        }
+
+        // Cập nhật thông tin
+        Object.assign(user, data);
+        await user.save();
+
+        // Trả về user sạch (không mật khẩu)
+        const updatedUser = user.get({ plain: true });
+        delete updatedUser.password;
+        return updatedUser;
+    }
 }
 
 module.exports = AuthService;

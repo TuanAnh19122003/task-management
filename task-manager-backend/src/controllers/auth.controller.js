@@ -35,6 +35,27 @@ class AuthController {
         }
     }
 
+    static async updateMe(req, res) {
+        try {
+            const userId = req.user.id; // Lấy từ authMiddleware
+            const data = req.body;      // Các trường firstname, lastname, email
+            const file = req.file;      // File ảnh từ multer
+
+            const updatedUser = await AuthService.updateMe(userId, data, file);
+
+            res.status(200).json({
+                success: true,
+                message: 'Cập nhật thông tin thành công',
+                data: updatedUser
+            });
+        } catch (err) {
+            res.status(500).json({
+                success: false,
+                message: err.message
+            });
+        }
+    }
+
 }
 
 module.exports = AuthController;

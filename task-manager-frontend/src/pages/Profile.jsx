@@ -18,7 +18,7 @@ export default function Profile() {
     useEffect(() => {
         const fetchUser = async () => {
             try {
-                const res = await API.get('/users/me');
+                const res = await API.get('/auth/me');
                 const user = res.data.data;
                 setFormData({
                     firstname: user.firstname,
@@ -60,7 +60,7 @@ export default function Profile() {
         }
 
         try {
-            await API.put('/users/me', data, {
+            await API.put('/auth/me', data, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             alert("Cập nhật thông tin thành công!");

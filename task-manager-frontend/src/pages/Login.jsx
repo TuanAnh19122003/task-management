@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, ArrowRight, Loader2 } from 'lucide-react';
-import API from '../api/api'; // Hãy chắc chắn đường dẫn này đúng với file api của bạn
+import { Mail, Lock, ArrowRight, Loader2, Eye, EyeOff } from 'lucide-react';
+import API from '../api/api';
 
-export default function Login() {
+export default function Login({ onLoginSuccess }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false); 
+    const [rememberMe, setRememberMe] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const navigate = useNavigate();
@@ -16,26 +18,22 @@ export default function Login() {
         setError('');
         try {
             const res = await API.post('/auth/login', { email, password });
-
-            // KIỂM TRA LẠI Ở ĐÂY: 
-            // Nếu backend của bạn trả về { data: { token: '...' } } thì phải là res.data.data.token
-            // Tôi sẽ dùng logic bọc để chắc chắn lấy được token
             const token = res.data.token || res.data.data?.token;
 
             if (token) {
                 localStorage.setItem('token', token);
-                // Sau khi lưu xong, đợi một nhịp nhỏ rồi chuyển trang để đảm bảo localStorage đã nhận
-                setTimeout(() => {
-                    navigate('/');
-                    // Force reload nếu cần để App.jsx nhận state mới
-                    window.location.reload();
-                }, 100);
+                if (rememberMe) {
+                    localStorage.setItem('rememberedEmail', email);
+                } else {
+                    localStorage.removeItem('rememberedEmail');
+                }
+
+                if (onLoginSuccess) onLoginSuccess();
+                navigate('/');
             } else {
                 setError('Không nhận được mã xác thực từ máy chủ');
             }
-
         } catch (err) {
-            console.error("Login Error:", err);
             setError(err.response?.data?.message || 'Email hoặc mật khẩu không đúng');
         } finally {
             setLoading(false);
@@ -60,6 +58,7 @@ export default function Login() {
                 )}
 
                 <form onSubmit={handleLogin} className="space-y-5">
+                    {/* Email Input */}
                     <div className="relative group">
                         <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={20} />
                         <input
@@ -72,16 +71,40 @@ export default function Login() {
                         />
                     </div>
 
+                    {/* Password Input với nút Hiện mật khẩu */}
                     <div className="relative group">
                         <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={20} />
                         <input
-                            type="password"
+                            type={showPassword ? "text" : "password"}
                             placeholder="Mật khẩu"
-                            className="w-full pl-12 pr-4 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 transition-all outline-none"
+                            className="w-full pl-12 pr-12 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 transition-all outline-none"
                             required
                             value={password}
                             onChange={e => setPassword(e.target.value)}
                         />
+                        <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-500 transition-colors"
+                        >
+                            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                        </button>
+                    </div>
+
+                    {/* Ghi nhớ & Quên mật khẩu */}
+                    <div className="flex items-center justify-between px-1">
+                        <label className="flex items-center gap-2 cursor-pointer group">
+                            <input
+                                type="checkbox"
+                                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                checked={rememberMe}
+                                onChange={(e) => setRememberMe(e.target.checked)}
+                            />
+                            <span className="text-sm text-gray-500 group-hover:text-gray-700 transition-colors">Ghi nhớ tôi</span>
+                        </label>
+                        <Link to="/forgot-password" size={20} className="text-sm font-bold text-blue-600 hover:text-blue-700 transition-colors">
+                            Quên mật khẩu?
+                        </Link>
                     </div>
 
                     <button

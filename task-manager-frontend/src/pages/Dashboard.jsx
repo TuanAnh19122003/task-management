@@ -36,13 +36,21 @@ export default function Dashboard() {
         } catch (err) {
             console.error("Lỗi tải dữ liệu:", err);
             if (err.response?.status === 401) {
-                localStorage.clear();
+                // SỬA TẠI ĐÂY: Chỉ xóa token, không dùng clear()
+                localStorage.removeItem('token');
                 window.location.href = '/login';
             }
         } finally {
             setLoading(false);
         }
     }, []);
+
+    // Hàm xử lý đăng xuất an toàn
+    const handleLogout = () => {
+        localStorage.removeItem('token'); // Chỉ xóa token xác thực
+        // Không xóa 'rememberedEmail' để tính năng ghi nhớ vẫn hoạt động
+        window.location.href = '/login';
+    };
 
     // Tự động gọi lại dữ liệu khi F5 trang
     useEffect(() => {
@@ -142,7 +150,7 @@ export default function Dashboard() {
 
     return (
         <div className="min-h-screen bg-white">
-            <Navbar user={user} onLogout={() => { localStorage.clear(); window.location.href = '/login'; }} />
+            <Navbar user={user} onLogout={handleLogout} />
 
             <main className="max-w-7xl mx-auto px-4 py-8">
                 <div className="flex justify-between items-end mb-8">
@@ -209,7 +217,7 @@ export default function Dashboard() {
                                         <span className="font-bold text-blue-600">{h.newStatus}</span>
                                     </p>
                                     <p className="text-[10px] text-gray-400 mt-1 italic">
-                                        {new Date(h.createdAt).toLocaleString('vi-VN')}
+                                        {new Date(h.changedAt).toLocaleString('vi-VN')}
                                     </p>
                                 </div>
                             </div>

@@ -12,6 +12,8 @@ export default function Dashboard() {
     const [tasks, setTasks] = useState([]);
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [history, setHistory] = useState([]);
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingTask, setEditingTask] = useState(null);
@@ -104,10 +106,15 @@ export default function Dashboard() {
     };
 
     // Hàm hiển thị lịch sử
-    const handleShowHistory = (task) => {
-        alert(`Tính năng lịch sử cho: ${task.title} đang được phát triển.`);
+    const handleShowHistory = async (task) => {
+        try {
+            const res = await API.get(`/tasks/${task.id}/history`);
+            setHistory(res.data.data);
+            setIsHistoryOpen(true);
+        } catch (err) {
+            console.error(err);
+        }
     };
-
     // Hàm xóa Task
     const handleDelete = async (id) => {
         try {
@@ -249,6 +256,30 @@ export default function Dashboard() {
                     </div>
                 </DragDropContext>
             </main>
+
+            <Modal isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} title="Lịch sử hoạt động">
+                <div className="space-y-4 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
+                    {history && history.length > 0 ? (
+                        history.map((h, i) => (
+                            <div key={i} className="flex gap-3 border-l-2 border-blue-100 pl-4 py-1 relative">
+                                <div className="absolute -left-1.5 top-2 w-3 h-3 rounded-full bg-blue-500 border-2 border-white shadow-sm"></div>
+                                <div className="flex-1">
+                                    <p className="text-sm text-gray-700 leading-tight">
+                                        Đã chuyển từ <span className="font-bold text-gray-400">{h.oldStatus}</span>
+                                        <span className="mx-1">→</span>
+                                        <span className="font-bold text-blue-600">{h.newStatus}</span>
+                                    </p>
+                                    <p className="text-[10px] text-gray-400 mt-1 italic">
+                                        {new Date(h.changedAt).toLocaleString('vi-VN')}
+                                    </p>
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="text-center py-10 text-gray-400 text-sm italic">Chưa có dữ liệu lịch sử.</div>
+                    )}
+                </div>
+            </Modal>
 
             {/* Modal giữ nguyên */}
             <Modal isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} title={editingTask ? "Cập nhật" : "Tạo task"}>

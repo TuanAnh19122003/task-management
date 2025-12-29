@@ -10,7 +10,7 @@ const TaskHistory = sequelize.define('TaskHistory', {
     changedAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 }, {
     tableName: 'task_histories',
-    timestamps: true
+    timestamps: false
 });
 
 TaskHistory.belongsTo(Task, { foreignKey: 'taskId', as: 'task' });

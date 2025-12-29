@@ -41,7 +41,7 @@ class AuthService {
         if (file) {
             // Xóa ảnh cũ nếu có
             if (user.avatar) {
-                const oldImagePath = path.join(__dirname, '../../', user.avatar);
+                const oldImagePath = path.join(__dirname, '..', user.avatar);
                 if (fs.existsSync(oldImagePath)) {
                     fs.unlinkSync(oldImagePath);
                 }

@@ -1,9 +1,9 @@
 import React from 'react';
-import { LogOut, Layout, UserCircle } from 'lucide-react'; // Thêm icon UserCircle nếu cần
-import { Link } from 'react-router-dom'; // QUAN TRỌNG: Import Link
+import { LogOut, Sparkles } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function Navbar({ user, onLogout }) {
-    const BASE_URL = 'http://localhost:5000'; // Đảm bảo URL này khớp với Backend của bạn
+    const BASE_URL = 'http://localhost:5000';
 
     return (
         <nav className="bg-white border-b border-gray-100 sticky top-0 z-30">
@@ -11,8 +11,8 @@ export default function Navbar({ user, onLogout }) {
 
                 {/* Logo - Nhấn vào để về Dashboard */}
                 <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-                    <div className="bg-blue-600 p-2.5 rounded-xl shadow-lg shadow-blue-100 text-white">
-                        <Layout size={22} />
+                    <div className="bg-white p-2.5 rounded-xl shadow-lg shadow-blue-100 text-white">
+                        <Sparkles className="text-indigo-600" size={24} />
                     </div>
                     <span className="text-xl font-black tracking-tighter text-gray-800">TASKFLOW</span>
                 </Link>

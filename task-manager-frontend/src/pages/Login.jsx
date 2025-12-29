@@ -142,8 +142,8 @@ export default function Auth({ onLoginSuccess }) {
                     </div>
 
                     <div className="mb-8">
-                        <h2 className="text-4xl font-black text-gray-900 tracking-tighter mb-2">
-                            {mode === 'login' ? 'Vào hệ thống' : 'Tạo tài khoản'}
+                        <h2 className="text-4xl font-black text-gray-900 tracking-tighter mb-2 text-center">
+                            {mode === 'login' ? 'Chào bạn quay lại!' : 'Gia nhập cộng đồng'}
                         </h2>
                     </div>
 

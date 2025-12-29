@@ -92,6 +92,32 @@ export default function Dashboard() {
         } catch { alert("Lỗi!"); }
     };
 
+    const handleOpenEdit = (task) => {
+        setEditingTask(task);
+        setFormData({
+            title: task.title,
+            description: task.description || '',
+            deadline: task.deadline ? new Date(task.deadline).toISOString().substring(0, 16) : '',
+            status: task.status
+        });
+        setIsFormOpen(true);
+    };
+
+    // Hàm hiển thị lịch sử
+    const handleShowHistory = (task) => {
+        alert(`Tính năng lịch sử cho: ${task.title} đang được phát triển.`);
+    };
+
+    // Hàm xóa Task
+    const handleDelete = async (id) => {
+        try {
+            await API.delete(`/tasks/${id}`);
+            refreshTasks();
+        } catch {
+            alert("Không thể xóa công việc này.");
+        }
+    };
+
     if (loading) return (
         <div className="min-h-screen flex items-center justify-center bg-white">
             <Loader2 className="animate-spin text-indigo-600" size={32} />
@@ -102,125 +128,124 @@ export default function Dashboard() {
         <div className="min-h-screen bg-white font-sans">
             <Navbar user={user} onLogout={handleLogout} />
 
-            <main className="max-w-360 mx-auto px-8 py-12">
-                <div className="flex justify-between items-center mb-8">
+            <main className="max-w-350 mx-auto px-4 md:px-8 py-8 md:py-12">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                     <div className="flex items-center gap-3">
-                        <div className="bg-indigo-600 p-2 rounded-xl shadow-lg shadow-indigo-100">
-                            <Kanban className="text-white" size={20} />
+                        <div className="bg-indigo-600 p-2.5 rounded-2xl shadow-xl shadow-indigo-100">
+                            <Kanban className="text-white" size={24} />
                         </div>
-                        <h2 className="text-3xl font-black text-gray-900 tracking-tight">Bảng công việc</h2>
+                        <h2 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight">Bảng công việc</h2>
                     </div>
                     <button
                         onClick={() => { setEditingTask(null); setFormData({ title: '', description: '', deadline: '', status: 'todo' }); setIsFormOpen(true); }}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3.5 rounded-2xl font-black transition-all flex items-center gap-2 active:scale-95 shadow-xl shadow-indigo-100"
+                        className="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-2xl font-black transition-all flex items-center justify-center gap-2 active:scale-95 shadow-xl shadow-indigo-100"
                     >
                         <Plus size={20} /> Tạo task mới
                     </button>
                 </div>
 
-                {/* --- ANALYTICS BAR --- */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                    {/* Card: Hoàn thành */}
-                    {/* Sử dụng bg-linear-to-br thay cho bg-gradient-to-br */}
-                    <div className="bg-linear-to-br from-indigo-600 to-blue-500 rounded-3xl p-6 text-white shadow-xl shadow-blue-100 transition-transform hover:scale-[1.02]">
-                        <p className="text-xs font-bold text-white/70 uppercase tracking-widest mb-1">Tiến độ</p>
+                {/* --- ANALYTICS BAR (Đã tối ưu Responsive) --- */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+                    {/* Card Tiến Độ */}
+                    <div className="bg-linear-to-br from-indigo-600 to-blue-500 rounded-4xl p-7 text-white shadow-xl shadow-blue-100 transition-transform hover:scale-[1.02]">
+                        <p className="text-[10px] font-black text-white/60 uppercase tracking-widest mb-1">Tiến độ</p>
                         <div className="flex items-end justify-between">
-                            <h4 className="text-3xl font-black">{stats.done}/{stats.total}</h4>
-                            <CheckCircle2 size={32} className="opacity-40" />
+                            <h4 className="text-4xl font-black">{stats.done}/{stats.total}</h4>
+                            <CheckCircle2 size={36} className="opacity-30" />
                         </div>
-
-                        {/* Thanh Progress Bar với hiệu ứng chiều sâu bạn vừa thêm */}
-                        <div className="mt-4 h-1.5 bg-white/20 rounded-full overflow-hidden shadow-inner">
-                            <div
-                                className="h-full bg-white transition-all duration-1000 ease-out shadow-[0_0_8px_rgba(255,255,255,0.8)]"
-                                style={{ width: `${stats.percent}%` }}
-                            ></div>
+                        <div className="mt-6 h-1.5 bg-white/20 rounded-full overflow-hidden shadow-inner">
+                            <div className="h-full bg-white transition-all duration-1000 ease-out" style={{ width: `${stats.percent}%` }}></div>
                         </div>
-                        <p className="text-[10px] font-bold mt-2 text-white/80">{stats.percent}% hoàn thành</p>
+                        <p className="text-xs font-bold mt-3 text-white/90">{stats.percent}% hoàn thành</p>
                     </div>
 
-                    {/* Card: Thời gian */}
-                    <div className="bg-gray-50 rounded-3xl p-6 border border-gray-100 group hover:bg-white hover:shadow-xl hover:shadow-gray-100 transition-all cursor-default">
-                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Thời gian</p>
+                    {/* Card Thời Gian */}
+                    <div className="bg-gray-50 rounded-4xl p-7 border border-gray-100 group hover:bg-white hover:shadow-xl transition-all">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Hôm nay</p>
                         <div className="flex items-end justify-between">
-                            <h4 className="text-2xl font-black text-gray-900">Hôm nay</h4>
-                            <Calendar size={32} className="text-gray-200 group-hover:text-indigo-600 transition-colors" />
+                            <h4 className="text-2xl font-black text-gray-900">Tháng {new Date().getMonth() + 1}</h4>
+                            <Calendar size={36} className="text-gray-200 group-hover:text-indigo-600 transition-colors" />
                         </div>
-                        <p className="text-xs font-bold text-gray-400 mt-4 uppercase">
-                            {new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long' })}
+                        <p className="text-sm font-bold text-gray-500 mt-6 lowercase italic">
+                            {new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric' })}
                         </p>
                     </div>
 
-                    {/* Card: Sắp hết hạn */}
-                    <div className="bg-gray-50 rounded-3xl p-6 border border-gray-100 group hover:bg-white hover:shadow-xl hover:shadow-gray-100 transition-all">
-                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Sắp hết hạn</p>
+                    {/* Card Gấp */}
+                    <div className="bg-gray-50 rounded-4xl p-7 border border-gray-100 group hover:bg-white hover:shadow-xl transition-all sm:col-span-2 lg:col-span-1">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Cần lưu ý</p>
                         <div className="flex items-end justify-between">
-                            <h4 className="text-2xl font-black text-gray-900">
-                                {stats.urgentTasks < 10 ? `0${stats.urgentTasks}` : stats.urgentTasks} Task
-                            </h4>
-                            <AlertCircle size={32} className="text-gray-200 group-hover:text-amber-500 transition-colors" />
+                            <h4 className="text-2xl font-black text-gray-900">{stats.urgentTasks} Task đến hạn</h4>
+                            <AlertCircle size={36} className="text-gray-200 group-hover:text-amber-500 transition-colors" />
                         </div>
-                        <button className="text-[10px] font-black text-indigo-600 uppercase mt-4 flex items-center gap-1 hover:gap-2 transition-all">
-                            Xem ngay <ChevronRight size={12} />
+                        <button className="text-[11px] font-black text-indigo-600 uppercase mt-6 flex items-center gap-2 hover:gap-3 transition-all">
+                            Xem ngay <ChevronRight size={14} />
                         </button>
                     </div>
                 </div>
 
-                {/* Phần Kanban Board giữ nguyên logic kéo thả của bạn */}
+                {/* --- KANBAN BOARD --- */}
                 <DragDropContext onDragEnd={onDragEnd}>
-                    <div className="flex flex-col xl:flex-row gap-8 overflow-x-auto pb-8">
-                        {['todo', 'doing', 'done'].map((columnId) => (
-                            <div key={columnId} className="flex-1 min-w-85 max-w-100 bg-gray-50/50 rounded-4xl p-6 flex flex-col border border-gray-100 h-[calc(100vh-320px)]">
-                                <div className="flex items-center justify-between mb-6">
-                                    <h3 className="font-black text-gray-700 uppercase text-[11px] tracking-widest flex items-center gap-2">
-                                        <div className={`w-2 h-2 rounded-full ${columnId === 'todo' ? 'bg-gray-300' : columnId === 'doing' ? 'bg-indigo-500' : 'bg-emerald-500'}`} />
-                                        {columnId === 'todo' ? 'Cần làm' : columnId === 'doing' ? 'Đang xử lý' : 'Hoàn thành'}
-                                    </h3>
-                                    <span className="text-[10px] font-black bg-white px-2 py-1 rounded-lg border border-gray-100 text-gray-400">
-                                        {tasks.filter(t => t.status === columnId).length}
-                                    </span>
-                                </div>
+                    <div className="flex flex-col lg:flex-row gap-6 md:gap-8 overflow-x-auto pb-6">
+                        {['todo', 'doing', 'done'].map((columnId) => {
+                            const columnTasks = tasks.filter(t => t.status === columnId);
 
-                                <Droppable droppableId={columnId}>
-                                    {(provided, snapshot) => (
-                                        <div
-                                            {...provided.droppableProps}
-                                            ref={provided.innerRef}
-                                            className={`flex-1 space-y-4 overflow-y-auto pr-2 transition-all rounded-2xl ${snapshot.isDraggingOver ? 'bg-indigo-50/60 shadow-inner' : ''}`}
-                                        >
-                                            {tasks.filter(t => t.status === columnId).map((task, index) => (
-                                                <Draggable key={task.id.toString()} draggableId={task.id.toString()} index={index}>
-                                                    {(provided, snapshot) => (
-                                                        <div
-                                                            ref={provided.innerRef}
-                                                            {...provided.draggableProps}
-                                                            {...provided.dragHandleProps}
-                                                            className={`${snapshot.isDragging ? "z-50 rotate-2" : ""} transition-transform`}
-                                                        >
-                                                            <TaskItem
-                                                                task={task}
-                                                                onEdit={() => {
-                                                                    setEditingTask(task);
-                                                                    setFormData({
-                                                                        title: task.title,
-                                                                        description: task.description || '',
-                                                                        deadline: task.deadline ? new Date(task.deadline).toISOString().substring(0, 16) : '',
-                                                                        status: task.status
-                                                                    });
-                                                                    setIsFormOpen(true);
-                                                                }}
-                                                                onDelete={refreshTasks}
-                                                            />
+                            return (
+                                <div key={columnId} className="flex-1 min-w-[320px] bg-gray-50/50 rounded-[40px] p-6 flex flex-col border border-gray-100/50 min-h-125 lg:h-[calc(100vh-380px)]">
+                                    <div className="flex items-center justify-between mb-6">
+                                        <h3 className="font-black text-gray-700 uppercase text-[11px] tracking-widest flex items-center gap-2">
+                                            <div className={`w-2.5 h-2.5 rounded-full ${columnId === 'todo' ? 'bg-gray-300' : columnId === 'doing' ? 'bg-indigo-500' : 'bg-emerald-500'}`} />
+                                            {columnId === 'todo' ? 'Cần làm' : columnId === 'doing' ? 'Đang làm' : 'Xong'}
+                                        </h3>
+                                        <span className="text-[10px] font-black bg-white px-3 py-1.5 rounded-xl border border-gray-100 text-gray-400 shadow-sm">
+                                            {columnTasks.length}
+                                        </span>
+                                    </div>
+
+                                    <Droppable droppableId={columnId}>
+                                        {(provided, snapshot) => (
+                                            <div
+                                                {...provided.droppableProps}
+                                                ref={provided.innerRef}
+                                                className={`flex-1 flex flex-col space-y-4 overflow-y-auto pr-2 transition-all rounded-3xl ${snapshot.isDraggingOver ? 'bg-indigo-50/40' : ''}`}
+                                            >
+                                                {/* KIỂM TRA NẾU CỘT TRỐNG */}
+                                                {columnTasks.length === 0 ? (
+                                                    <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-3xl p-8 text-center">
+                                                        <div className="bg-gray-100 p-4 rounded-full mb-3">
+                                                            <Target className="text-gray-300" size={32} />
                                                         </div>
-                                                    )}
-                                                </Draggable>
-                                            ))}
-                                            {provided.placeholder}
-                                        </div>
-                                    )}
-                                </Droppable>
-                            </div>
-                        ))}
+                                                        <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">Trống</p>
+                                                        <p className="text-gray-300 text-[10px] mt-1 italic">Kéo thả hoặc tạo task mới</p>
+                                                    </div>
+                                                ) : (
+                                                    columnTasks.map((task, index) => (
+                                                        <Draggable key={task.id.toString()} draggableId={task.id.toString()} index={index}>
+                                                            {(provided, snapshot) => (
+                                                                <div
+                                                                    ref={provided.innerRef}
+                                                                    {...provided.draggableProps}
+                                                                    {...provided.dragHandleProps}
+                                                                    className={snapshot.isDragging ? "z-50" : ""}
+                                                                >
+                                                                    <TaskItem
+                                                                        task={task}
+                                                                        onEdit={handleOpenEdit}
+                                                                        onDelete={handleDelete}
+                                                                        onShowHistory={handleShowHistory}
+                                                                    />
+                                                                </div>
+                                                            )}
+                                                        </Draggable>
+                                                    ))
+                                                )}
+                                                {provided.placeholder}
+                                            </div>
+                                        )}
+                                    </Droppable>
+                                </div>
+                            );
+                        })}
                     </div>
                 </DragDropContext>
             </main>

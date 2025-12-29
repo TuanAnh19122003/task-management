@@ -13,7 +13,7 @@ const TaskHistory = sequelize.define('TaskHistory', {
     timestamps: false
 });
 
-TaskHistory.belongsTo(Task, { foreignKey: 'taskId', as: 'task' });
+TaskHistory.belongsTo(Task, { foreignKey: 'taskId', onDelete: 'CASCADE', as: 'task' });
 Task.hasMany(TaskHistory, { foreignKey: 'taskId', as: 'histories' });
 
 module.exports = TaskHistory;

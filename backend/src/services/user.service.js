@@ -1,5 +1,7 @@
 const User = require('../models/user.model');
 const hashPass = require('../utils/hashPass');
+const path = require('path');
+const fs = require('fs');
 
 class UserService {
     static async getAllUsers(data) {
@@ -9,12 +11,19 @@ class UserService {
 
     static async getUserById(id) {
         const user = await User.findByPk(id);
+        if(!user){
+            throw new Error('User not found');
+        }
         return user;
     }
 
-    static async createUser(data) {
+    static async createUser(data, file) {
         const hashedPassword = await hashPass(data.password);
         data.password = hashedPassword;
+
+        if(file){
+            data.avatar = `uploads/${file.filename}`;
+        }
 
         try {
             const user = await User.create(data);
@@ -28,7 +37,7 @@ class UserService {
     }
 
 
-    static async updateUser(id, data) {
+    static async updateUser(id, data, file) {
         const user = await User.findByPk(id);
         if (!user) {
             throw new Error('User not found');
@@ -37,6 +46,17 @@ class UserService {
         if (data.password) {
             const hashedPassword = await hashPass(data.password);
             data.password = hashedPassword;
+        }
+        if (file) {
+            if (user.avatar) {
+                const oldImagePath = path.join(__dirname, '..', user.avatar);
+
+                if (fs.existsSync(oldImagePath)) {
+                    fs.unlinkSync(oldImagePath);
+                }
+            }
+
+            data.avatar = `uploads/${file.filename}`;
         }
         Object.assign(user, data);
         return await user.save();
@@ -47,6 +67,12 @@ class UserService {
         const user = await User.findByPk(id);
         if (!user) {
             throw new Error('User not found');
+        }
+        if (user.avatar) {
+            const imagePath = path.join(__dirname, '..', user.avatar);
+            if (fs.existsSync(imagePath)) {
+                fs.unlinkSync(imagePath);
+            }
         }
         await user.destroy();
         return true;

@@ -37,7 +37,7 @@ class UserController {
 
     async createUser(req, res) {
         try {
-            const user = await UserService.createUser(req.body);
+            const user = await UserService.createUser(req.body, req.file);
             res.status(201).json({
                 message: 'User created successfully',
                 success: true,
@@ -54,7 +54,7 @@ class UserController {
 
     async updateUser(req, res) {
         try {
-            const user = await UserService.updateUser(req.params.id, req.body);
+            const user = await UserService.updateUser(req.params.id, req.body, req.file);
             res.status(200).json({
                 message: 'User updated successfully',
                 success: true,

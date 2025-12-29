@@ -2,6 +2,8 @@ const User = require('../models/user.model');
 const { hashPass, comparePass } = require('../utils/hashPass');
 const jwt = require('jsonwebtoken');
 const jwtConfig = require('../config/jwt');
+const fs = require('fs');   // THÊM DÒNG NÀY
+const path = require('path'); // THÊM DÒNG NÀY
 
 class AuthService {
     static async register(data) {

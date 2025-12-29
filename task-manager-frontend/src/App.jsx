@@ -1,7 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import Login from './pages/Login';
-import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile'; // 1. Import trang Profile
 
@@ -23,7 +22,6 @@ function App() {
           path="/login"
           element={!isAuthenticated ? <Login onLoginSuccess={() => setIsAuthenticated(true)} /> : <Navigate to="/" />}
         />
-        <Route path="/register" element={<Register />} />
 
         {/* Route cho Dashboard */}
         <Route

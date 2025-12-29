@@ -1,258 +1,245 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import API from '../api/api';
 import Navbar from '../components/Navbar';
 import TaskItem from '../components/TaskItem';
 import Modal from '../components/Modal';
-import { Plus, Loader2, Target } from 'lucide-react';
+import { Plus, Loader2, Kanban, CheckCircle2, Calendar, AlertCircle, ChevronRight, Calendar as CalendarIcon, Target } from 'lucide-react';
 
 export default function Dashboard() {
+    const navigate = useNavigate();
     const [tasks, setTasks] = useState([]);
     const [user, setUser] = useState(null);
-    const [history, setHistory] = useState([]);
     const [loading, setLoading] = useState(true);
 
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingTask, setEditingTask] = useState(null);
     const [formData, setFormData] = useState({ title: '', description: '', deadline: '', status: 'todo' });
-    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
-    // Tính toán thống kê nhanh
-    const stats = {
-        total: tasks.length,
-        done: tasks.filter(t => t.status === 'done').length,
-        percent: tasks.length > 0 ? Math.round((tasks.filter(t => t.status === 'done').length / tasks.length) * 100) : 0
-    };
+    // Tính toán thống kê
+    const stats = useMemo(() => {
+        const total = tasks.length;
+        const done = tasks.filter(t => t.status === 'done').length;
+
+        // Tính task sắp hết hạn (còn dưới 48h và chưa done)
+        const now = new Date();
+        const urgentTasks = tasks.filter(t => {
+            if (!t.deadline || t.status === 'done') return false;
+            const diff = new Date(t.deadline) - now;
+            return diff > 0 && diff < (48 * 60 * 60 * 1000);
+        }).length;
+
+        return {
+            total,
+            done,
+            percent: total > 0 ? Math.round((done / total) * 100) : 0,
+            urgentTasks
+        };
+    }, [tasks]);
 
     const loadInitialData = useCallback(async () => {
         try {
-            setLoading(true);
             const token = localStorage.getItem('token');
-            if (!token) {
-                window.location.href = '/login';
-                return;
-            }
-
-            const [uRes, tRes] = await Promise.all([
-                API.get('/auth/me'),
-                API.get('/tasks')
-            ]);
-
+            if (!token) { navigate('/login'); return; }
+            const [uRes, tRes] = await Promise.all([API.get('/auth/me'), API.get('/tasks')]);
             setUser(uRes.data.data);
-            setTasks(tRes.data.data);
-        } catch (err) {
-            console.error("Lỗi tải dữ liệu:", err);
-            if (err.response?.status === 401) {
-                localStorage.removeItem('token');
-                window.location.href = '/login';
-            }
+            setTasks(tRes.data.data || []);
+        } catch {
+            navigate('/login');
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [navigate]);
+
+    useEffect(() => { loadInitialData(); }, [loadInitialData]);
 
     const handleLogout = () => {
         localStorage.removeItem('token');
+        // Sử dụng window.location để reset hoàn toàn bộ nhớ cache/state bị lag
         window.location.href = '/login';
     };
 
-    useEffect(() => {
-        loadInitialData();
-    }, [loadInitialData]);
-
+    // ... (Giữ nguyên hàm onDragEnd, refreshTasks, handleOpenEdit, handleSubmit từ code cũ của bạn)
     const refreshTasks = async () => {
         try {
             const tRes = await API.get('/tasks');
-            setTasks(tRes.data.data);
-        } catch (err) {
-            console.error("Lỗi làm mới danh sách:", err);
+            setTasks(tRes.data.data || []);
+        } catch (error) { console.error(error); }
+    };
+
+    const onDragEnd = async (result) => {
+        const { destination, source, draggableId } = result;
+        if (!destination || (destination.droppableId === source.droppableId && destination.index === source.index)) return;
+        const newStatus = destination.droppableId;
+        const originalTasks = [...tasks];
+        setTasks(tasks.map(t => t.id.toString() === draggableId ? { ...t, status: newStatus } : t));
+        try {
+            await API.put(`/tasks/${draggableId}`, { status: newStatus });
+        } catch {
+            setTasks(originalTasks);
+            alert("Lỗi cập nhật!");
         }
-    };
-
-    const openCreateModal = () => {
-        setEditingTask(null);
-        setFormData({ title: '', description: '', deadline: '', status: 'todo' });
-        setIsFormOpen(true);
-    };
-
-    const openEditModal = (task) => {
-        setEditingTask(task);
-        setFormData({
-            title: task.title,
-            description: task.description || '',
-            deadline: task.deadline ? new Date(task.deadline).toISOString().substring(0, 16) : '',
-            status: task.status
-        });
-        setIsFormOpen(true);
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            if (editingTask) {
-                await API.put(`/tasks/${editingTask.id}`, formData);
-            } else {
-                await API.post('/tasks', formData);
-            }
+            if (editingTask) await API.put(`/tasks/${editingTask.id}`, formData);
+            else await API.post('/tasks', formData);
             setIsFormOpen(false);
             refreshTasks();
-        } catch (err) {
-            console.error(err);
-            alert("Có lỗi xảy ra!");
-        }
+        } catch { alert("Lỗi!"); }
     };
 
-    const handleDelete = async (id) => {
-        if (window.confirm("Bạn có chắc chắn muốn xóa task này?")) {
-            try {
-                await API.delete(`/tasks/${id}`);
-                refreshTasks();
-            } catch (err) {
-                console.error(err);
-            }
-        }
-    };
-
-    const showHistory = async (task) => {
-        try {
-            const res = await API.get(`/tasks/${task.id}/history`);
-            setHistory(res.data.data);
-            setIsHistoryOpen(true);
-        } catch (err) {
-            console.error(err);
-        }
-    };
-
-    const renderColumn = (status, title, dotColor) => (
-        <div className="flex-1 min-w-[320px] bg-gray-50/50 rounded-3xl p-5 flex flex-col max-h-[75vh] border border-gray-100">
-            <div className="flex items-center justify-between mb-5 px-1">
-                <h3 className="flex items-center gap-2 font-black text-gray-700 uppercase text-xs tracking-widest">
-                    <span className={`w-2 h-2 rounded-full ${dotColor}`}></span> {title}
-                </h3>
-                <span className="text-[10px] font-black bg-white px-2 py-1 rounded-lg shadow-sm text-gray-400 border border-gray-50">
-                    {tasks.filter(t => t.status === status).length}
-                </span>
-            </div>
-            <div className="space-y-4 overflow-y-auto pr-1 custom-scrollbar">
-                {tasks.filter(t => t.status === status).map(task => (
-                    <TaskItem key={task.id} task={task} onEdit={openEditModal} onDelete={handleDelete} onShowHistory={showHistory} />
-                ))}
-            </div>
+    if (loading) return (
+        <div className="min-h-screen flex items-center justify-center bg-white">
+            <Loader2 className="animate-spin text-indigo-600" size={32} />
         </div>
     );
 
-    if (loading) {
-        return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
-                <Loader2 className="animate-spin text-blue-600 mb-4" size={40} />
-                <p className="text-gray-500 font-medium">Đang đồng bộ dữ liệu...</p>
-            </div>
-        );
-    }
-
     return (
-        <div className="min-h-screen bg-white">
+        <div className="min-h-screen bg-white font-sans">
             <Navbar user={user} onLogout={handleLogout} />
 
-            <main className="max-w-7xl mx-auto px-6 py-10">
-                {/* Header Section */}
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-12">
-                    <div className="space-y-1">
-                        <h2 className="text-4xl font-black tracking-tighter text-gray-900 uppercase">Dự án của tôi</h2>
-                        <div className="flex items-center gap-2 text-gray-400 text-sm font-medium">
-                            <Target size={16} className="text-blue-500" />
-                            <span>Bạn đã hoàn thành <b>{stats.done}/{stats.total}</b> công việc</span>
+            <main className="max-w-360 mx-auto px-8 py-12">
+                <div className="flex justify-between items-center mb-8">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-indigo-600 p-2 rounded-xl shadow-lg shadow-indigo-100">
+                            <Kanban className="text-white" size={20} />
                         </div>
+                        <h2 className="text-3xl font-black text-gray-900 tracking-tight">Bảng công việc</h2>
                     </div>
-
-                    <button onClick={openCreateModal} className="flex items-center gap-2 bg-gray-900 hover:bg-black text-white px-6 py-4 rounded-2xl font-bold transition-all shadow-xl active:scale-95">
-                        <Plus size={20} /> Tạo Task Mới
+                    <button
+                        onClick={() => { setEditingTask(null); setFormData({ title: '', description: '', deadline: '', status: 'todo' }); setIsFormOpen(true); }}
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3.5 rounded-2xl font-black transition-all flex items-center gap-2 active:scale-95 shadow-xl shadow-indigo-100"
+                    >
+                        <Plus size={20} /> Tạo task mới
                     </button>
                 </div>
 
-                {/* Progress Bar - Giúp Dashboard bớt trống */}
-                <div className="mb-12 bg-gray-50 p-6 rounded-3xl border border-gray-100 flex items-center gap-6">
-                    <div className="hidden sm:flex w-16 h-16 rounded-2xl bg-white border border-gray-100 items-center justify-center shadow-sm">
-                        <span className="text-xl font-black text-blue-600">{stats.percent}%</span>
-                    </div>
-                    <div className="flex-1 space-y-2">
-                        <div className="flex justify-between text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                            <span>Tiến độ tổng thể</span>
-                            <span>{stats.percent}% Hoàn tất</span>
+                {/* --- ANALYTICS BAR --- */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                    {/* Card: Hoàn thành */}
+                    {/* Sử dụng bg-linear-to-br thay cho bg-gradient-to-br */}
+                    <div className="bg-linear-to-br from-indigo-600 to-blue-500 rounded-3xl p-6 text-white shadow-xl shadow-blue-100 transition-transform hover:scale-[1.02]">
+                        <p className="text-xs font-bold text-white/70 uppercase tracking-widest mb-1">Tiến độ</p>
+                        <div className="flex items-end justify-between">
+                            <h4 className="text-3xl font-black">{stats.done}/{stats.total}</h4>
+                            <CheckCircle2 size={32} className="opacity-40" />
                         </div>
-                        <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
+
+                        {/* Thanh Progress Bar với hiệu ứng chiều sâu bạn vừa thêm */}
+                        <div className="mt-4 h-1.5 bg-white/20 rounded-full overflow-hidden shadow-inner">
                             <div
-                                className="h-full bg-blue-600 transition-all duration-1000 ease-out"
+                                className="h-full bg-white transition-all duration-1000 ease-out shadow-[0_0_8px_rgba(255,255,255,0.8)]"
                                 style={{ width: `${stats.percent}%` }}
                             ></div>
                         </div>
+                        <p className="text-[10px] font-bold mt-2 text-white/80">{stats.percent}% hoàn thành</p>
+                    </div>
+
+                    {/* Card: Thời gian */}
+                    <div className="bg-gray-50 rounded-3xl p-6 border border-gray-100 group hover:bg-white hover:shadow-xl hover:shadow-gray-100 transition-all cursor-default">
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Thời gian</p>
+                        <div className="flex items-end justify-between">
+                            <h4 className="text-2xl font-black text-gray-900">Hôm nay</h4>
+                            <Calendar size={32} className="text-gray-200 group-hover:text-indigo-600 transition-colors" />
+                        </div>
+                        <p className="text-xs font-bold text-gray-400 mt-4 uppercase">
+                            {new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long' })}
+                        </p>
+                    </div>
+
+                    {/* Card: Sắp hết hạn */}
+                    <div className="bg-gray-50 rounded-3xl p-6 border border-gray-100 group hover:bg-white hover:shadow-xl hover:shadow-gray-100 transition-all">
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Sắp hết hạn</p>
+                        <div className="flex items-end justify-between">
+                            <h4 className="text-2xl font-black text-gray-900">
+                                {stats.urgentTasks < 10 ? `0${stats.urgentTasks}` : stats.urgentTasks} Task
+                            </h4>
+                            <AlertCircle size={32} className="text-gray-200 group-hover:text-amber-500 transition-colors" />
+                        </div>
+                        <button className="text-[10px] font-black text-indigo-600 uppercase mt-4 flex items-center gap-1 hover:gap-2 transition-all">
+                            Xem ngay <ChevronRight size={12} />
+                        </button>
                     </div>
                 </div>
 
-                {/* Kanban Board */}
-                <div className="flex flex-col md:flex-row gap-8 overflow-x-auto pb-6">
-                    {renderColumn('todo', 'Cần làm', 'bg-gray-300')}
-                    {renderColumn('doing', 'Đang xử lý', 'bg-blue-500')}
-                    {renderColumn('done', 'Đã hoàn thành', 'bg-green-500')}
-                </div>
+                {/* Phần Kanban Board giữ nguyên logic kéo thả của bạn */}
+                <DragDropContext onDragEnd={onDragEnd}>
+                    <div className="flex flex-col xl:flex-row gap-8 overflow-x-auto pb-8">
+                        {['todo', 'doing', 'done'].map((columnId) => (
+                            <div key={columnId} className="flex-1 min-w-85 max-w-100 bg-gray-50/50 rounded-4xl p-6 flex flex-col border border-gray-100 h-[calc(100vh-320px)]">
+                                <div className="flex items-center justify-between mb-6">
+                                    <h3 className="font-black text-gray-700 uppercase text-[11px] tracking-widest flex items-center gap-2">
+                                        <div className={`w-2 h-2 rounded-full ${columnId === 'todo' ? 'bg-gray-300' : columnId === 'doing' ? 'bg-indigo-500' : 'bg-emerald-500'}`} />
+                                        {columnId === 'todo' ? 'Cần làm' : columnId === 'doing' ? 'Đang xử lý' : 'Hoàn thành'}
+                                    </h3>
+                                    <span className="text-[10px] font-black bg-white px-2 py-1 rounded-lg border border-gray-100 text-gray-400">
+                                        {tasks.filter(t => t.status === columnId).length}
+                                    </span>
+                                </div>
+
+                                <Droppable droppableId={columnId}>
+                                    {(provided, snapshot) => (
+                                        <div
+                                            {...provided.droppableProps}
+                                            ref={provided.innerRef}
+                                            className={`flex-1 space-y-4 overflow-y-auto pr-2 transition-all rounded-2xl ${snapshot.isDraggingOver ? 'bg-indigo-50/60 shadow-inner' : ''}`}
+                                        >
+                                            {tasks.filter(t => t.status === columnId).map((task, index) => (
+                                                <Draggable key={task.id.toString()} draggableId={task.id.toString()} index={index}>
+                                                    {(provided, snapshot) => (
+                                                        <div
+                                                            ref={provided.innerRef}
+                                                            {...provided.draggableProps}
+                                                            {...provided.dragHandleProps}
+                                                            className={`${snapshot.isDragging ? "z-50 rotate-2" : ""} transition-transform`}
+                                                        >
+                                                            <TaskItem
+                                                                task={task}
+                                                                onEdit={() => {
+                                                                    setEditingTask(task);
+                                                                    setFormData({
+                                                                        title: task.title,
+                                                                        description: task.description || '',
+                                                                        deadline: task.deadline ? new Date(task.deadline).toISOString().substring(0, 16) : '',
+                                                                        status: task.status
+                                                                    });
+                                                                    setIsFormOpen(true);
+                                                                }}
+                                                                onDelete={refreshTasks}
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </Draggable>
+                                            ))}
+                                            {provided.placeholder}
+                                        </div>
+                                    )}
+                                </Droppable>
+                            </div>
+                        ))}
+                    </div>
+                </DragDropContext>
             </main>
 
-            {/* Modals giữ nguyên logic cũ của bạn */}
-            <Modal isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} title={editingTask ? "Cập nhật công việc" : "Thiết lập công việc mới"}>
+            {/* Modal giữ nguyên */}
+            <Modal isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} title={editingTask ? "Cập nhật" : "Tạo task"}>
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Tiêu đề công việc</label>
-                        <input type="text" required className="w-full p-4 bg-gray-50 border-none rounded-2xl mt-1 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                            placeholder="Nhập tên task..." value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} />
-                    </div>
-                    <div>
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Mô tả chi tiết</label>
-                        <textarea className="w-full p-4 bg-gray-50 border-none rounded-2xl h-28 mt-1 focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none"
-                            placeholder="Mô tả nội dung..." value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />
-                    </div>
+                    <input className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border border-transparent focus:border-indigo-500 transition-all" placeholder="Tiêu đề" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} required />
+                    <textarea className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none h-32 border border-transparent focus:border-indigo-500 transition-all resize-none" placeholder="Mô tả" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />
                     <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Hạn chót</label>
-                            <input type="datetime-local" className="w-full p-4 bg-gray-50 border-none rounded-2xl mt-1 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                value={formData.deadline} onChange={e => setFormData({ ...formData, deadline: e.target.value })} />
-                        </div>
-                        <div>
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Trạng thái</label>
-                            <select className="w-full p-4 bg-gray-50 border-none rounded-2xl mt-1 focus:ring-2 focus:ring-blue-500 outline-none transition-all cursor-pointer"
-                                value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })}>
-                                <option value="todo">Cần làm</option>
-                                <option value="doing">Đang làm</option>
-                                <option value="done">Hoàn thành</option>
-                            </select>
-                        </div>
+                        <input type="datetime-local" className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none" value={formData.deadline} onChange={e => setFormData({ ...formData, deadline: e.target.value })} />
+                        <select className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none cursor-pointer" value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })}>
+                            <option value="todo">Cần làm</option>
+                            <option value="doing">Đang làm</option>
+                            <option value="done">Hoàn thành</option>
+                        </select>
                     </div>
-                    <button className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all mt-4 active:scale-95">
-                        {editingTask ? "Lưu thay đổi" : "Khởi tạo công việc"}
-                    </button>
+                    <button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-black shadow-lg shadow-indigo-100 transition-all active:scale-95">Lưu lại</button>
                 </form>
-            </Modal>
-
-            <Modal isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} title="Lịch sử hoạt động">
-                <div className="space-y-4 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
-                    {history && history.length > 0 ? (
-                        history.map((h, i) => (
-                            <div key={i} className="flex gap-3 border-l-2 border-blue-100 pl-4 py-1 relative">
-                                <div className="absolute -left-1.5 top-2 w-3 h-3 rounded-full bg-blue-500 border-2 border-white"></div>
-                                <div className="flex-1">
-                                    <p className="text-sm text-gray-700 leading-tight">
-                                        Đã chuyển từ <span className="font-bold text-gray-400">{h.oldStatus}</span>
-                                        <span className="mx-1">→</span>
-                                        <span className="font-bold text-blue-600">{h.newStatus}</span>
-                                    </p>
-                                    <p className="text-[10px] text-gray-400 mt-1 italic">
-                                        {new Date(h.changedAt || h.createdAt).toLocaleString('vi-VN')}
-                                    </p>
-                                </div>
-                            </div>
-                        ))
-                    ) : (
-                        <div className="text-center py-10 text-gray-400 text-sm italic">Chưa có dữ liệu lịch sử.</div>
-                    )}
-                </div>
             </Modal>
         </div>
     );

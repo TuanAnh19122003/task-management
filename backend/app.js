@@ -3,6 +3,7 @@ const path = require('path');
 const morgan = require('morgan');
 const cors = require('cors');
 const db = require('./src/models/index');
+const api = require('./src/routes/index');
 
 const app = express();
 
@@ -14,6 +15,7 @@ app.use(morgan('dev'));
 
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, 'src', 'uploads')));
+app.use('/api/', api);
 
 // Test route
 app.get('/', (req, res) => {

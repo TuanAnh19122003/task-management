@@ -1,5 +1,6 @@
 const AuthService = require('../services/auth.service');
-
+const User = require('../models/user.model');
+const UserService = require('../services/user.service');
 class AuthController {
     static async register(req, res) {
         try {
@@ -19,6 +20,21 @@ class AuthController {
             res.status(400).json({ message: err.message, success: false });
         }
     }
+
+    static async getMe(req, res) {
+        try {
+            res.status(200).json({
+                success: true,
+                data: req.user
+            });
+        } catch (err) {
+            res.status(500).json({
+                success: false,
+                message: "Lỗi server khi lấy thông tin người dùng"
+            });
+        }
+    }
+
 }
 
 module.exports = AuthController;

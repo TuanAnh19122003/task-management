@@ -1,53 +1,41 @@
-import React, { useState } from 'react';
-import API from '../api';
-import Modal from './Modal';
+import React from 'react';
+import { Calendar, Trash2, History, Clock, PlayCircle, CheckCircle, Pencil } from 'lucide-react';
 
-export default function TaskItem({ task, onUpdate, showToast }) {
-    const [confirmOpen, setConfirmOpen] = useState(false);
+const statusMap = {
+    todo: { color: 'bg-gray-100 text-gray-600', icon: <Clock size={14} />, label: 'Cần làm' },
+    doing: { color: 'bg-blue-100 text-blue-600', icon: <PlayCircle size={14} />, label: 'Đang làm' },
+    done: { color: 'bg-green-100 text-green-600', icon: <CheckCircle size={14} />, label: 'Xong' }
+};
 
-    const updateStatus = async status => {
-        try {
-            await API.put(`/tasks/${task.id}`, { status });
-            showToast('Status updated!', 'success');
-            onUpdate();
-        } catch (err) {
-            showToast(err.response?.data?.message || err.message, 'error');
-        }
-    };
-
-    const deleteTask = async () => {
-        try {
-            await API.delete(`/tasks/${task.id}`);
-            showToast('Task deleted!', 'success');
-            onUpdate();
-            setConfirmOpen(false);
-        } catch (err) {
-            showToast(err.response?.data?.message || err.message, 'error');
-        }
-    };
-
+export default function TaskItem({ task, onEdit, onDelete, onShowHistory }) {
     return (
-        <li className="flex justify-between items-center p-2 border-b bg-white rounded mb-2 shadow-sm">
-            <div>
-                <h3 className="font-bold">{task.title}</h3>
-                <p className="text-gray-600">{task.description}</p>
-                <p className="text-sm text-gray-500">Status: {task.status}</p>
-            </div>
-            <div className="flex gap-1">
-                <button className="bg-gray-200 p-1 rounded" onClick={() => updateStatus('todo')}>Todo</button>
-                <button className="bg-yellow-200 p-1 rounded" onClick={() => updateStatus('doing')}>Doing</button>
-                <button className="bg-green-200 p-1 rounded" onClick={() => updateStatus('done')}>Done</button>
-                <button className="bg-red-400 text-white p-1 rounded" onClick={() => setConfirmOpen(true)}>Delete</button>
+        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all group">
+            <div className="flex justify-between items-start mb-2">
+                <span className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold uppercase ${statusMap[task.status].color}`}>
+                    {statusMap[task.status].icon} {statusMap[task.status].label}
+                </span>
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => onEdit(task)} className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg" title="Sửa công việc">
+                        <Pencil size={16} />
+                    </button>
+                    <button onClick={() => onShowHistory(task)} className="p-1.5 text-gray-400 hover:text-purple-500 hover:bg-purple-50 rounded-lg" title="Lịch sử">
+                        <History size={16} />
+                    </button>
+                    <button onClick={() => onDelete(task.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg" title="Xóa">
+                        <Trash2 size={16} />
+                    </button>
+                </div>
             </div>
 
-            <Modal
-                isOpen={confirmOpen}
-                onClose={() => setConfirmOpen(false)}
-                onConfirm={deleteTask}
-                title="Confirm Delete"
-            >
-                Are you sure you want to delete this task?
-            </Modal>
-        </li>
+            <h4 className="font-semibold text-gray-800 mb-1">{task.title}</h4>
+            <p className="text-gray-500 text-xs line-clamp-2 mb-3">{task.description || "Không có mô tả"}</p>
+
+            <div className="flex items-center justify-between pt-3 border-t border-gray-50">
+                <div className="flex items-center text-[11px] text-gray-400 gap-1">
+                    <Calendar size={12} />
+                    {task.deadline ? new Date(task.deadline).toLocaleDateString() : 'Không có hạn'}
+                </div>
+            </div>
+        </div>
     );
 }

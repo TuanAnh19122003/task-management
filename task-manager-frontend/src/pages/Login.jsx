@@ -21,7 +21,7 @@ export default function Login({ onLoginSuccess }) {
     }, []);
 
     const handleLogin = async (e) => {
-        e.preventDefault(); // Ngăn load lại trang
+        e.preventDefault();
         setLoading(true);
         setError('');
 
@@ -30,20 +30,15 @@ export default function Login({ onLoginSuccess }) {
             const token = res.data.token || res.data.data?.token;
 
             if (token) {
-                // LƯU TOKEN
                 localStorage.setItem('token', token);
 
-                // LOGIC GHI NHỚ TÀI KHOẢN
                 if (rememberMe) {
-                    console.log("Đang tiến hành lưu email:", email);
                     localStorage.setItem('rememberedEmail', email);
                 } else {
                     localStorage.removeItem('rememberedEmail');
                 }
 
                 if (onLoginSuccess) onLoginSuccess();
-
-                // Chuyển hướng
                 navigate('/');
             } else {
                 setError('Lỗi: Máy chủ không trả về Token');
@@ -78,7 +73,7 @@ export default function Login({ onLoginSuccess }) {
                         <input
                             type="email"
                             placeholder="Email của bạn"
-                            className="w-full pl-12 pr-4 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none"
+                            className="w-full pl-12 pr-4 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                             required
                             value={email}
                             onChange={e => setEmail(e.target.value)}
@@ -90,7 +85,7 @@ export default function Login({ onLoginSuccess }) {
                         <input
                             type={showPassword ? "text" : "password"}
                             placeholder="Mật khẩu"
-                            className="w-full pl-12 pr-12 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none"
+                            className="w-full pl-12 pr-12 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                             required
                             value={password}
                             onChange={e => setPassword(e.target.value)}
@@ -110,12 +105,11 @@ export default function Login({ onLoginSuccess }) {
                                 type="checkbox"
                                 className="w-4 h-4 rounded border-gray-300 text-blue-600"
                                 checked={rememberMe}
-                                // QUAN TRỌNG: Phải cập nhật state khi click
                                 onChange={(e) => setRememberMe(e.target.checked)}
                             />
-                            <span className="text-sm text-gray-500">Ghi nhớ tôi</span>
+                            <span className="text-sm text-gray-500 font-medium">Ghi nhớ tôi</span>
                         </label>
-                        <Link to="/forgot-password" size={20} className="text-sm font-bold text-blue-600">
+                        <Link to="/forgot-password" size={20} className="text-sm font-bold text-blue-600 hover:underline">
                             Quên mật khẩu?
                         </Link>
                     </div>
@@ -123,12 +117,26 @@ export default function Login({ onLoginSuccess }) {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-lg shadow-blue-100"
                     >
                         {loading ? <Loader2 className="animate-spin" /> : "Đăng nhập"}
                         {!loading && <ArrowRight size={20} />}
                     </button>
                 </form>
+
+                {/* --- ĐÂY LÀ PHẦN BẠN CẦN --- */}
+                <div className="mt-8 pt-6 border-t border-gray-100 text-center">
+                    <p className="text-gray-500 text-sm font-medium">
+                        Chưa có tài khoản?{' '}
+                        <Link
+                            to="/register"
+                            className="text-blue-600 font-black hover:underline underline-offset-4"
+                        >
+                            Đăng ký ngay
+                        </Link>
+                    </p>
+                </div>
+                {/* --------------------------- */}
             </div>
         </div>
     );

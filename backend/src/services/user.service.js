@@ -1,5 +1,5 @@
 const User = require('../models/user.model');
-const hashPass = require('../utils/hashPass');
+const { hashPass } = require('../utils/hashPass');
 const path = require('path');
 const fs = require('fs');
 
@@ -11,7 +11,7 @@ class UserService {
 
     static async getUserById(id) {
         const user = await User.findByPk(id);
-        if(!user){
+        if (!user) {
             throw new Error('User not found');
         }
         return user;
@@ -21,7 +21,7 @@ class UserService {
         const hashedPassword = await hashPass(data.password);
         data.password = hashedPassword;
 
-        if(file){
+        if (file) {
             data.avatar = `uploads/${file.filename}`;
         }
 

@@ -10,7 +10,7 @@ const db = {
     sequelize
 }
 
-sequelize.sync({ alter: true })
+sequelize.sync({ force: false })
     .then(() => {
         console.log('Connection successful');
     })

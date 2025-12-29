@@ -10,7 +10,11 @@ module.exports = (req, res, next) => {
 
     try {
         const decoded = jwt.verify(token, jwtConfig.secret);
-        req.user = decoded; // lưu thông tin user
+        // Chắc chắn id là number
+        req.user = {
+            id: Number(decoded.id), 
+            email: decoded.email
+        };
         next();
     } catch (err) {
         res.status(401).json({ message: 'Token hết hạn hoặc không hợp lệ' });
